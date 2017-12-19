@@ -4,8 +4,8 @@ ARG USERNAME=frommakefile
 #
 FROM ${USERNAME}/${DOCKERSRC}:${ARCH}
 #
-ARG PUID=1000
-ARG PGID=1000
+ARG PUID=1001
+ARG PGID=1001
 #
 RUN addgroup -g ${PGID} -S alpine && \
     adduser -u ${PUID} -G alpine -h /home/alpine -D alpine
