@@ -38,7 +38,7 @@ OTHERFLAGS := # -v /etc/hosts:/etc/hosts:ro -v /etc/localtime:/etc/localtime:ro 
 PORTFLAGS  := #
 PROXYFLAGS := --build-arg http_proxy=$(http_proxy) --build-arg https_proxy=$(https_proxy) --build-arg no_proxy=$(no_proxy)
 
-RUNFLAGS   := -c 64 -m 32m -e PGID=$(PGID) -e PUID=$(PUID)
+RUNFLAGS   := -c 128 -m 256m -e PGID=$(PGID) -e PUID=$(PUID)
 
 # -- }}}
 
@@ -82,7 +82,7 @@ stop :
 	docker stop -t 2 docker_$(SVCNAME)
 
 test :
-	docker run --rm -it $(NAMEFLAGS) $(RUNFLAGS) $(PORTFLAGS) $(MOUNTFLAGS) $(OTHERFLAGS) $(IMAGETAG) sh -ec 'python --version; pip --version'
+	docker run --rm -it $(NAMEFLAGS) $(RUNFLAGS) $(PORTFLAGS) $(MOUNTFLAGS) $(OTHERFLAGS) $(IMAGETAG) sh -ec 'python -V; pip -V;'
 
 # -- }}}
 
