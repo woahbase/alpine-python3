@@ -129,7 +129,7 @@ docker build --rm --compress --force-rm \
   -f ./Dockerfile_x86_64 \
   -t woahbase/alpine-python3:x86_64 \
   --build-arg ARCH=x86_64 \
-  --build-arg DOCKERSRC=alpine-base \
+  --build-arg DOCKERSRC=alpine-s6 \
   --build-arg USERNAME=woahbase \
   --build-arg PUID=1000 \
   --build-arg PGID=1000
