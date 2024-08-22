@@ -1,0 +1,38 @@
+#!/usr/bin/with-contenv bash
+set -e
+
+vecho () { if [ "${S6_VERBOSITY:-1}" -gt 0 ]; then echo "[$0] $@"; fi; }
+
+# install these packages using pip as non-root user, specified on runtime
+# make sure user packages get installed into USERHOMEDIR/.local
+# in case HOME is not set or is /root
+USERHOMEDIR="$(getent passwd ${S6_USER:-alpine} | cut -d: -f6)";
+# customizable install prefix location
+USERINSTPREFIX="${USERINSTPREFIX:-${USERHOMEDIR}/.local}";
+
+# S6_PIP_USER_PACKAGES=""; # list of packages passed at runtime, if required
+if [ -n "${S6_PIP_USER_PACKAGES}" ];
+then
+    vecho "Installing pip (user) packages: ${S6_PIP_USER_PACKAGES}";
+    s6-setuidgid "${S6_USER}" \
+        pip install \
+        --no-cache-dir \
+        --prefix=${USERINSTPREFIX} \
+        ${S6_PIP_USER_PACKAGES};
+fi;
+
+# S6_PIP_USER_REQUIREMENTS=""; # path to file passed at runtime, if required
+if [ -n "${S6_PIP_USER_REQUIREMENTS}" ] \
+&& [ -f "${S6_PIP_USER_REQUIREMENTS}" ];
+then
+    vecho "Installing pip (user) requirements from: ${S6_PIP_USER_REQUIREMENTS}";
+    s6-setuidgid "${S6_USER}" \
+        pip install \
+        --no-cache-dir \
+        --prefix=${USERINSTPREFIX} \
+        -r ${S6_PIP_USER_REQUIREMENTS};
+fi;
+
+# add user package binaries dir to PATH
+# visible to with-contenv
+echo -en "${USERINSTPREFIX}/bin:$PATH" > /run/s6/container_environment/PATH;

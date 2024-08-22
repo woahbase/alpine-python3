@@ -4,6 +4,9 @@ ARG IMAGEBASE=frommakefile
 #
 FROM ${IMAGEBASE}
 #
+ENV \
+    PYTHONUNBUFFERED=1
+#
 RUN set -xe \
     && apk add --no-cache --purge -uU \
         python3 \

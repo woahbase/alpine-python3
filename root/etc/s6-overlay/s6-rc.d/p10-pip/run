@@ -1,39 +1,20 @@
 #!/usr/bin/with-contenv bash
 set -e
 
+vecho () { if [ "${S6_VERBOSITY:-1}" -gt 0 ]; then echo "[$0] $@"; fi; }
+
 # install these packages using pip, specified on runtime
 # --break-system-packages added since PEP 668 (externally managed environment)
 
 # S6_PIP_PACKAGES=""; # list of packages passed at runtime, if required
 if [ -n "${S6_PIP_PACKAGES}" ]; then
+    vecho "Installing pip packages: ${S6_PIP_PACKAGES}";
     pip install --break-system-packages --no-cache-dir ${S6_PIP_PACKAGES};
 fi;
+
 # S6_PIP_REQUIREMENTS=""; # path to file passed at runtime, if required
-if [ -f "${S6_PIP_REQUIREMENTS}" ]; then
+if [ -n "${S6_PIP_REQUIREMENTS}" ] \
+&& [ -f "${S6_PIP_REQUIREMENTS}" ]; then
+    vecho "Installing pip requirements from: ${S6_PIP_REQUIREMENTS}";
     pip install --break-system-packages --no-cache-dir -r ${S6_PIP_REQUIREMENTS};
 fi;
-
-# make sure user packages get installed into USERHOMEDIR/.local
-# in case HOME is not set or is /root
-USERHOMEDIR="$(getent passwd ${S6_USER:-alpine} | cut -d: -f6)";
-# S6_PIP_USER_PACKAGES=""; # list of packages passed at runtime, if required
-if [ -n "${S6_PIP_USER_PACKAGES}" ]; then
-    s6-setuidgid "${S6_USER}" \
-        pip install \
-        --no-cache-dir \
-        --prefix=${USERHOMEDIR}/.local \
-        ${S6_PIP_USER_PACKAGES};
-fi;
-
-# S6_PIP_USER_REQUIREMENTS=""; # path to file passed at runtime, if required
-if [ -f "${S6_PIP_USER_REQUIREMENTS}" ]; then
-    s6-setuidgid "${S6_USER}" \
-        pip install \
-        --no-cache-dir \
-        --prefix=${USERHOMEDIR}/.local \
-        -r ${S6_PIP_USER_REQUIREMENTS};
-fi;
-
-# add user package binaries dir to PATH
-# visible to with-contenv
-echo -en "${USERHOMEDIR}/.local/bin:$PATH" > /run/s6/container_environment/PATH;
