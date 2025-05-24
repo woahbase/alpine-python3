@@ -3,18 +3,19 @@ set -e
 
 vecho () { if [ "${S6_VERBOSITY:-1}" -gt 0 ]; then echo "[$0] $@"; fi; }
 
-# install these packages using pip, specified on runtime
+# install these packages using pip as root, specified on runtime
 # --break-system-packages added since PEP 668 (externally managed environment)
+# --root-user-action=ignore added to suppress warning about being root
 
 # S6_PIP_PACKAGES=""; # list of packages passed at runtime, if required
 if [ -n "${S6_PIP_PACKAGES}" ]; then
     vecho "Installing pip packages: ${S6_PIP_PACKAGES}";
-    pip install --break-system-packages --no-cache-dir ${S6_PIP_PACKAGES};
+    pip install --break-system-packages --no-cache-dir --root-user-action=ignore ${S6_PIP_PACKAGES};
 fi;
 
 # S6_PIP_REQUIREMENTS=""; # path to file passed at runtime, if required
 if [ -n "${S6_PIP_REQUIREMENTS}" ] \
 && [ -f "${S6_PIP_REQUIREMENTS}" ]; then
     vecho "Installing pip requirements from: ${S6_PIP_REQUIREMENTS}";
-    pip install --break-system-packages --no-cache-dir -r ${S6_PIP_REQUIREMENTS};
+    pip install --break-system-packages --no-cache-dir --root-user-action=ignore -r ${S6_PIP_REQUIREMENTS};
 fi;

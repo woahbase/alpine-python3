@@ -8,16 +8,16 @@ vecho () { if [ "${S6_VERBOSITY:-1}" -gt 0 ]; then echo "[$0] $@"; fi; }
 # in case HOME is not set or is /root
 USERHOMEDIR="$(getent passwd ${S6_USER:-alpine} | cut -d: -f6)";
 # customizable install prefix location
-USERINSTPREFIX="${USERINSTPREFIX:-${USERHOMEDIR}/.local}";
+PYTHONUSERBASE="${PYTHONUSERBASE:-${USERHOMEDIR}/.local}";
 
 # S6_PIP_USER_PACKAGES=""; # list of packages passed at runtime, if required
 if [ -n "${S6_PIP_USER_PACKAGES}" ];
 then
     vecho "Installing pip (user) packages: ${S6_PIP_USER_PACKAGES}";
-    s6-setuidgid "${S6_USER}" \
+    s6-setuidgid "${S6_USER:-alpine}" \
         pip install \
         --no-cache-dir \
-        --prefix=${USERINSTPREFIX} \
+        --prefix=${PYTHONUSERBASE} \
         ${S6_PIP_USER_PACKAGES};
 fi;
 
@@ -26,13 +26,40 @@ if [ -n "${S6_PIP_USER_REQUIREMENTS}" ] \
 && [ -f "${S6_PIP_USER_REQUIREMENTS}" ];
 then
     vecho "Installing pip (user) requirements from: ${S6_PIP_USER_REQUIREMENTS}";
-    s6-setuidgid "${S6_USER}" \
+    s6-setuidgid "${S6_USER:-alpine}" \
         pip install \
         --no-cache-dir \
-        --prefix=${USERINSTPREFIX} \
+        --prefix=${PYTHONUSERBASE} \
         -r ${S6_PIP_USER_REQUIREMENTS};
 fi;
 
-# add user package binaries dir to PATH
+# optionally add user package binaries dir to PATH
 # visible to with-contenv
-echo -en "${USERINSTPREFIX}/bin:$PATH" > /run/s6/container_environment/PATH;
+if [ -z "${PYTHON_SKIP_MODIFY_PATH}" ] \
+&& [ -d "${PYTHONUSERBASE}" ] \
+&& [[ "${PATH}" != *${PYTHONUSERBASE}/bin* ]];
+# && ls -A "${PYTHONUSERBASE}/bin" 1>/dev/null 2>&1
+# only check if dir exists, instead of checking if dir is empty
+# because it might get populated in a later phase
+then
+    vecho "Include pip (user) bin directory in \$PATH";
+    echo -en "${PYTHONUSERBASE}/bin:${PATH}" > /run/s6/container_environment/PATH;
+fi;
+
+# # optionally prepend user packages dir to PYTHONPATH
+# # visible to with-contenv
+# if [ -z "${PYTHON_SKIP_MODIFY_PYTHONPATH}" ] \
+# && [ -d "${PYTHONUSERBASE}" ]; # directory must exist
+# # && ls -A "${PYTHONUSERBASE}/lib" 1>/dev/null 2>&1;
+# # only check if dir exists, instead of checking if dir is empty
+# # because it might get populated in a later phase
+# then
+#     _PYTHONPATH="${PYTHONUSERBASE}/lib/python$(python3 -c 'import platform;print(".".join(platform.python_version().split(".")[:-1]))')/site-packages";
+#     if [[ "${PYTHONPATH}" != *${_PYTHONPATH}* ]];
+#     # && ls -A "${_PYTHONPATH}" 1>/dev/null 2>&1;
+#     then
+#         vecho "Include pip (user) packages directory in \$PYTHONPATH";
+#         # if PYTHONPATH is specified in env, prepend it with a colon
+#         echo -en "${PYTHONPATH:+$PYTHONPATH:}${_PYTHONPATH}" > /run/s6/container_environment/PYTHONPATH;
+#     fi;
+# fi;

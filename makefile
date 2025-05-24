@@ -96,10 +96,12 @@ OTHERFLAGS := \
 	-m 256m \
 	-e PGID=$(PGID) \
 	-e PUID=$(PUID) \
+	# -e PYTHONUSERBASE=/home/alpine/.local \
+	# -e PYTHON_SKIP_MODIFY_PATH=1 \
 	# -e S6_NEEDED_PACKAGES="python3-dev pipx" \
-	# -e S6_PIP_PACKAGES="pipdeptree" \
+	# -e S6_PIP_PACKAGES="pipdeptree six" \
 	# -e S6_PIP_REQUIREMENTS="/requirements.txt" \
-	# -e S6_PIP_USER_PACKAGES="pipdeptree" \
+	# -e S6_PIP_USER_PACKAGES="pipdeptree six" \
 	# -e S6_PIP_USER_REQUIREMENTS="/home/alpine/project/requirements.txt" \
 	# -e TZ=Asia/Kolkata \
 	#
