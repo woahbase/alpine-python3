@@ -2,19 +2,21 @@
 set -e
 
 vecho () { if [ "${S6_VERBOSITY:-1}" -gt 0 ]; then echo "[$0] $@"; fi; }
+usercmd () { if [ "X${EUID}" != "X0" ]; then $@; else s6-setuidgid ${PUID:-1000}:${PGID:-1000} $@; fi; }
 
 # install these packages using pip as non-root user, specified on runtime
 # make sure user packages get installed into USERHOMEDIR/.local
 # in case HOME is not set or is /root
-USERHOMEDIR="$(getent passwd ${S6_USER:-alpine} | cut -d: -f6)";
+USERHOMEDIR="${S6_USERHOME:-$(getent passwd ${S6_USER:-alpine} | cut -d: -f6)}";
 # customizable install prefix location
 PYTHONUSERBASE="${PYTHONUSERBASE:-${USERHOMEDIR}/.local}";
+# for arbitrary user, directory must exist and be writable
 
 # S6_PIP_USER_PACKAGES=""; # list of packages passed at runtime, if required
 if [ -n "${S6_PIP_USER_PACKAGES}" ];
 then
     vecho "Installing pip (user) packages: ${S6_PIP_USER_PACKAGES}";
-    s6-setuidgid "${S6_USER:-alpine}" \
+    usercmd \
         pip install \
         --no-cache-dir \
         --prefix=${PYTHONUSERBASE} \
@@ -26,7 +28,7 @@ if [ -n "${S6_PIP_USER_REQUIREMENTS}" ] \
 && [ -f "${S6_PIP_USER_REQUIREMENTS}" ];
 then
     vecho "Installing pip (user) requirements from: ${S6_PIP_USER_REQUIREMENTS}";
-    s6-setuidgid "${S6_USER:-alpine}" \
+    usercmd \
         pip install \
         --no-cache-dir \
         --prefix=${PYTHONUSERBASE} \
@@ -48,18 +50,19 @@ fi;
 
 # # optionally prepend user packages dir to PYTHONPATH
 # # visible to with-contenv
-# if [ -z "${PYTHON_SKIP_MODIFY_PYTHONPATH}" ] \
-# && [ -d "${PYTHONUSERBASE}" ]; # directory must exist
-# # && ls -A "${PYTHONUSERBASE}/lib" 1>/dev/null 2>&1;
-# # only check if dir exists, instead of checking if dir is empty
-# # because it might get populated in a later phase
-# then
-#     _PYTHONPATH="${PYTHONUSERBASE}/lib/python$(python3 -c 'import platform;print(".".join(platform.python_version().split(".")[:-1]))')/site-packages";
-#     if [[ "${PYTHONPATH}" != *${_PYTHONPATH}* ]];
-#     # && ls -A "${_PYTHONPATH}" 1>/dev/null 2>&1;
-#     then
-#         vecho "Include pip (user) packages directory in \$PYTHONPATH";
-#         # if PYTHONPATH is specified in env, prepend it with a colon
-#         echo -en "${PYTHONPATH:+$PYTHONPATH:}${_PYTHONPATH}" > /run/s6/container_environment/PYTHONPATH;
-#     fi;
-# fi;
+if [ -z "${PYTHON_SKIP_MODIFY_PYTHONPATH}" ] \
+&& [ -d "${PYTHONUSERBASE}" ]; # directory must exist
+# && ls -A "${PYTHONUSERBASE}/lib" 1>/dev/null 2>&1;
+# only check if dir exists, instead of checking if dir is empty
+# because it might get populated in a later phase
+then
+    cur_path="${PYTHONPATH:-$(python3 -c 'import sys;print(":".join(list(filter(None, sys.path))))')}";
+    new_path="${PYTHONUSERBASE}/lib/python$(python3 -c 'import platform;print(".".join(platform.python_version().split(".")[:-1]))')/site-packages";
+    if [[ "${cur_path}" != *${new_path}* ]];
+    # && ls -A "${new_path}" 1>/dev/null 2>&1;
+    then
+        vecho "Include pip (user) packages directory in \$PYTHONPATH";
+        # if PYTHONPATH is specified in env, prepend it with a colon
+        echo -en "${PYTHONPATH:+$PYTHONPATH:}${new_path}" > /run/s6/container_environment/PYTHONPATH;
+    fi;
+fi;
